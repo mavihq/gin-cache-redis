@@ -160,7 +160,7 @@ func New(o ...Options) gin.HandlerFunc {
 				Header: http.Header(rw.Header()),
 				ExpireAt: func() time.Time {
 					if cache.options.Expire == 0 {
-						return time.Time{}
+						return time.Now().Add(5 * time.Minute)
 					} else {
 						return time.Now().Add(cache.options.Expire)
 					}
