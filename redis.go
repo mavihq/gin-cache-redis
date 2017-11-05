@@ -1,6 +1,8 @@
 package cache
 
 import (
+	"time"
+
 	"github.com/go-redis/redis"
 )
 
@@ -27,14 +29,14 @@ func (self *Redis) Get(key string) ([]byte, error) {
 	return self.Client.Get(key).Bytes()
 }
 
-func (self *Redis) Set(key string, value string) error {
-	return self.Client.Set(key, value, 0).Err()
+func (self *Redis) Set(key string, value string, expire time.Duration) error {
+	return self.Client.Set(key, value, expire).Err()
 }
 
 func (self *Redis) Remove(key string) error {
 	return self.Client.Del(key).Err()
 }
 
-func (self *Redis) Update(key string, value string) error {
-	return self.Set(key, value)
+func (self *Redis) Update(key string, value string, expire time.Duration) error {
+	return self.Set(key, value, expire)
 }

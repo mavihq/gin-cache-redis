@@ -26,14 +26,14 @@ type Cached struct {
 	Status   int
 	Body     []byte
 	Header   http.Header
-	ExpireAt time.Time
+	ExpireAt time.Duration
 }
 
 type Store interface {
 	Get(string) ([]byte, error)
-	Set(string, string) error
+	Set(string, string, time.Duration) error
 	Remove(string) error
-	Update(string, string) error
+	Update(string, string, time.Duration) error
 }
 
 type Options struct {
@@ -68,12 +68,6 @@ func (c *Cache) Get(key string) (*Cached, error) {
 		var cch *Cached
 		dec := gob.NewDecoder(bytes.NewBuffer(data))
 		dec.Decode(&cch)
-
-		if cch.ExpireAt.Nanosecond() != 0 && cch.ExpireAt.Before(time.Now()) {
-			c.Store.Remove(key)
-			return nil, nil
-		}
-
 		return cch, nil
 	} else {
 		return nil, err
@@ -85,7 +79,7 @@ func (c *Cache) Set(key string, cch *Cached) error {
 	enc := gob.NewEncoder(&b)
 
 	panicIf(enc.Encode(*cch))
-	return c.Store.Set(key, string(b.Bytes()))
+	return c.Store.Set(key, string(b.Bytes()), cch.ExpireAt)
 }
 
 func (c *Cache) Update(key string, cch *Cached) error {
@@ -94,7 +88,7 @@ func (c *Cache) Update(key string, cch *Cached) error {
 
 	panicIf(enc.Encode(*cch))
 
-	return c.Store.Update(key, string(b.Bytes()))
+	return c.Store.Update(key, string(b.Bytes()), cch.ExpireAt)
 }
 
 type wrappedWriter struct {
@@ -158,11 +152,11 @@ func New(o ...Options) gin.HandlerFunc {
 				Status: rw.Status(),
 				Body:   rw.body.Bytes(),
 				Header: http.Header(rw.Header()),
-				ExpireAt: func() time.Time {
+				ExpireAt: func() time.Duration {
 					if cache.options.Expire == 0 {
-						return time.Now().Add(5 * time.Minute)
+						return (5 * time.Minute)
 					} else {
-						return time.Now().Add(cache.options.Expire)
+						return cache.options.Expire
 					}
 				}(),
 			})
